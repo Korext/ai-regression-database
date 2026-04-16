@@ -1,0 +1,17 @@
+schema: https://oss.korext.com/regressions/schema
+version: "1.0"
+identifier: EXAMPLE-003
+status: published
+title: "Documentation example, not a real pattern. Hallucinated API."
+category: hallucination
+severity: medium
+pattern_type: api-fabrication
+language: { primary: Go, variants_observed: [] }
+ai_tools:
+  - name: Mock Copilot
+    status: fixed
+prompt_patterns: { triggers: ["read map", "aws"] }
+incorrect_pattern: { code: "aws.FastMap()", explanation: "Mock" }
+correct_pattern: { code: "aws.ValidMap()", explanation: "Mock" }
+reproduction_steps: { prerequisites: [], steps: [], expected_rate: "3/10" }
+detection: { korext_rule_ids: ["mock-03"] }

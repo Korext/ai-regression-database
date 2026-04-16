@@ -1,0 +1,17 @@
+schema: https://oss.korext.com/regressions/schema
+version: "1.0"
+identifier: EXAMPLE-005
+status: published
+title: "Documentation example, not a real pattern. Weak crypto."
+category: security
+severity: critical
+pattern_type: cryptography
+language: { primary: Node.js, variants_observed: [] }
+ai_tools:
+  - name: Mock Copilot
+    status: still_present
+prompt_patterns: { triggers: ["hash password", "crypto"] }
+incorrect_pattern: { code: "crypto.createHash('md5')", explanation: "Mock" }
+correct_pattern: { code: "crypto.createHash('sha256')", explanation: "Mock" }
+reproduction_steps: { prerequisites: [], steps: [], expected_rate: "8/10" }
+detection: { korext_rule_ids: ["mock-05"] }

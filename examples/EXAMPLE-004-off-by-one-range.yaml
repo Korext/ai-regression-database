@@ -1,0 +1,17 @@
+schema: https://oss.korext.com/regressions/schema
+version: "1.0"
+identifier: EXAMPLE-004
+status: published
+title: "Documentation example, not a real pattern. Off by one range."
+category: logic
+severity: medium
+pattern_type: logic
+language: { primary: Rust, variants_observed: [] }
+ai_tools:
+  - name: Mock Copilot
+    status: still_present
+prompt_patterns: { triggers: ["iterate to n"] }
+incorrect_pattern: { code: "for i in 0..n {}", explanation: "Mock" }
+correct_pattern: { code: "for i in 0..=n {}", explanation: "Mock" }
+reproduction_steps: { prerequisites: [], steps: [], expected_rate: "6/10" }
+detection: { korext_rule_ids: ["mock-04"] }

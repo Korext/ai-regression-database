@@ -1,0 +1,17 @@
+schema: https://oss.korext.com/regressions/schema
+version: "1.0"
+identifier: EXAMPLE-002
+status: published
+title: "Documentation example, not a real pattern. Missing Null Check."
+category: correctness
+severity: medium
+pattern_type: null-handling
+language: { primary: Python, variants_observed: [] }
+ai_tools:
+  - name: Mock Copilot
+    status: partially_fixed
+prompt_patterns: { triggers: ["search", "fetch"] }
+incorrect_pattern: { code: "def a(obj): return obj.get('x')", explanation: "Mock" }
+correct_pattern: { code: "def a(obj): return obj.get('x') if obj else None", explanation: "Mock" }
+reproduction_steps: { prerequisites: [], steps: [], expected_rate: "4/10" }
+detection: { korext_rule_ids: ["mock-02"] }

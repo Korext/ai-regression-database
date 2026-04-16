@@ -1,0 +1,17 @@
+schema: https://oss.korext.com/regressions/schema
+version: "1.0"
+identifier: EXAMPLE-001
+status: published
+title: "Documentation example, not a real pattern. String concat in SQL."
+category: security
+severity: high
+pattern_type: injection
+language: { primary: JavaScript, variants_observed: [TypeScript] }
+ai_tools:
+  - name: Mock Copilot
+    status: still_present
+prompt_patterns: { triggers: ["search", "sql"] }
+incorrect_pattern: { code: "const q = `SELECT * FROM x WHERE id = ${id}`;", explanation: "Mock" }
+correct_pattern: { code: "const q = 'SELECT * FROM x WHERE id = ?';", explanation: "Mock" }
+reproduction_steps: { prerequisites: [], steps: [], expected_rate: "5/10" }
+detection: { korext_rule_ids: ["mock-01"] }
