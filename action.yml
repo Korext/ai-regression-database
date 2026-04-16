@@ -1,0 +1,37 @@
+name: 'AI Regression Pattern Scan'
+description: 'Scan code for patterns from the AI Regression Database'
+author: 'Korext'
+
+branding:
+  icon: 'search'
+    color: 'purple'
+
+    inputs:
+      severity-threshold:
+          description: 'Minimum severity (low|medium|high|critical)'
+              required: false
+                  default: 'medium'
+                    categories:
+                        description: 'Categories to scan (comma separated)'
+                            required: false
+                                default: 'security,correctness'
+                                  pattern-age-days:
+                                      description: 'Only scan patterns from last N days'
+                                          required: false
+                                              default: '365'
+                                                fail-on-match:
+                                                    description: 'Fail build on pattern match'
+                                                        required: false
+                                                            default: 'false'
+
+                                                            outputs:
+                                                              matches-found:
+                                                                  description: 'Number of matching patterns'
+                                                                    pattern-ids:
+                                                                        description: 'Comma separated ARD identifiers'
+                                                                          status:
+                                                                              description: 'PASS or WARN or FAIL'
+
+                                                                              runs:
+                                                                                using: 'node20'
+                                                                                  main: 'action/index.js'
