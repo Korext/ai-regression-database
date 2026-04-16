@@ -1,6 +1,6 @@
 {
   "name": "@korext/regression-submit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI for drafting, submitting, and detecting AI coding regression patterns from the public registry at oss.korext.com/regressions.",
   "keywords": [
     "ai", "regression", "patterns",
@@ -20,7 +20,7 @@
     "url": "https://github.com/korext/ai-regression-database/issues"
   },
   "bin": {
-    "regression-submit": "./bin/regression-submit.js"
+    "regression-submit": "bin/regression-submit.js"
   },
   "files": [
     "bin/", "src/", "LICENSE",
