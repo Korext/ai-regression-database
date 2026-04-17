@@ -267,39 +267,216 @@ async function cmdSubmit(file = DEFAULT_FILE, dryRun = false) {
   req.end();
 }
 
-function loadLocalPatterns() {
-   // A mock of local patterns detecting files. Typically this uses an API or downloaded rule set.
-   return [];
+// ── Built-in detection patterns ──
+// These are common AI regression patterns observed in the public registry.
+// Each pattern has a regex, file extension filter, severity, and description.
+
+const BUILTIN_PATTERNS = [
+  {
+    id: 'ARD-BUILTIN-001',
+    title: 'SQL string concatenation',
+    severity: 'high',
+    category: 'security',
+    extensions: ['.js', '.ts', '.py', '.rb', '.java', '.php', '.go'],
+    regex: /(?:query|execute|exec|sql)\s*\(\s*(?:['"`]|f['"`])\s*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\b[^)]*\+/i,
+    description: 'SQL query built with string concatenation instead of parameterized queries'
+  },
+  {
+    id: 'ARD-BUILTIN-002',
+    title: 'Hardcoded secret or API key',
+    severity: 'critical',
+    category: 'security',
+    extensions: ['.js', '.ts', '.py', '.rb', '.java', '.go', '.php', '.env'],
+    regex: /(?:api[_-]?key|secret|password|token|auth)\s*[:=]\s*['"][A-Za-z0-9+/=_-]{16,}['"]/i,
+    description: 'Credential or API key hardcoded in source instead of environment variable'
+  },
+  {
+    id: 'ARD-BUILTIN-003',
+    title: 'eval() with dynamic input',
+    severity: 'high',
+    category: 'security',
+    extensions: ['.js', '.ts', '.py', '.rb', '.php'],
+    regex: /\beval\s*\(\s*(?!['"`])[a-zA-Z_$]/,
+    description: 'eval() called with variable input, enabling code injection'
+  },
+  {
+    id: 'ARD-BUILTIN-004',
+    title: 'JWT verification disabled',
+    severity: 'critical',
+    category: 'security',
+    extensions: ['.js', '.ts', '.py', '.rb', '.java', '.go'],
+    regex: /(?:verify|algorithms)\s*[:=]\s*(?:false|'none'|"none"|\['none'\]|\["none"\]|None)/i,
+    description: 'JWT signature verification disabled or algorithm set to none'
+  },
+  {
+    id: 'ARD-BUILTIN-005',
+    title: 'Unchecked null/undefined access',
+    severity: 'medium',
+    category: 'correctness',
+    extensions: ['.js', '.ts'],
+    regex: /(?:\.data|\.result|\.response|\.body|\.user|\.params)\.[a-zA-Z]+\.[a-zA-Z]+(?!\s*\?\.)(?!\s*&&)/,
+    description: 'Deep property access without null check or optional chaining'
+  },
+  {
+    id: 'ARD-BUILTIN-006',
+    title: 'Synchronous file I/O in async context',
+    severity: 'medium',
+    category: 'performance',
+    extensions: ['.js', '.ts'],
+    regex: /(?:readFileSync|writeFileSync|execSync|accessSync)\s*\(/,
+    description: 'Synchronous filesystem or process call in code that should be async'
+  },
+  {
+    id: 'ARD-BUILTIN-007',
+    title: 'Console.log left in production code',
+    severity: 'low',
+    category: 'maintainability',
+    extensions: ['.js', '.ts', '.jsx', '.tsx'],
+    regex: /\bconsole\.(log|debug|info)\s*\(\s*['"`](?:debug|test|TODO|FIXME|hack|temp)/i,
+    description: 'Debug logging with temporary markers left in code'
+  },
+  {
+    id: 'ARD-BUILTIN-008',
+    title: 'Catch block swallows error',
+    severity: 'medium',
+    category: 'correctness',
+    extensions: ['.js', '.ts', '.java', '.py'],
+    regex: /catch\s*\([^)]*\)\s*\{\s*\}/,
+    description: 'Empty catch block silently swallows errors'
+  },
+  {
+    id: 'ARD-BUILTIN-009',
+    title: 'Math.random for security',
+    severity: 'high',
+    category: 'security',
+    extensions: ['.js', '.ts'],
+    regex: /(?:token|secret|key|session|nonce|salt|id)\s*[:=]\s*.*Math\.random/i,
+    description: 'Math.random() used to generate security-sensitive values instead of crypto'
+  },
+  {
+    id: 'ARD-BUILTIN-010',
+    title: 'Shell command injection',
+    severity: 'critical',
+    category: 'security',
+    extensions: ['.js', '.ts', '.py', '.rb'],
+    regex: /(?:exec|spawn|system|popen|subprocess\.call|os\.system)\s*\(\s*(?:['"`].*\$\{|[a-zA-Z_$]+\s*\+|f['"`])/,
+    description: 'Shell command built with string interpolation, enabling command injection'
+  },
+];
+
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', '.svn', 'vendor', 'dist', 'build', '.next',
+  'coverage', '__pycache__', '.tox', '.venv', 'venv', 'target', 'bin',
+  '.idea', '.vscode', '.gradle', 'bower_components',
+]);
+
+const SCANNABLE_EXTENSIONS = new Set([
+  '.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.java', '.go', '.php',
+  '.rs', '.cs', '.swift', '.kt', '.scala', '.env', '.sh', '.bash',
+]);
+
+function walkDir(dir, fileList = []) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+  catch { return fileList; }
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') && entry.name !== '.env') continue;
+    if (SKIP_DIRS.has(entry.name)) continue;
+
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkDir(fullPath, fileList);
+    } else if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (SCANNABLE_EXTENSIONS.has(ext)) {
+        fileList.push(fullPath);
+      }
+    }
+  }
+  return fileList;
 }
 
-async function cmdDetect() {
-   console.log('\nAI Regression Pattern Scan\n');
-   console.log('Scanning current directory...');
+function cmdDetect() {
+  const jsonOutput = args.includes('--json');
+  const scanDir = process.cwd();
 
-   const reqClient = REGISTRY_URL.startsWith('https') ? https : http;
-   const url = new URL(REGISTRY_URL + '/detect');
-   console.log('\nScanned: 247 files');
-   console.log('Patterns loaded: 42\n');
-   console.log('Matches found: 3\n');
-   
-   console.log(`ARD-2026-0042: SQL string concat
-  src/db/users.js:15
-  Severity: high
-  Fix: https://oss.korext.com/regressions/ARD-2026-0042`);
-   console.log(`ARD-2026-0058: Missing null check
-  src/api/orders.js:89
-  Severity: medium
-  Fix: https://oss.korext.com/regressions/ARD-2026-0058`);
-   console.log(`ARD-2026-0071: Unvalidated JWT
-  src/auth/middleware.js:23
-  Severity: critical
-  Fix: https://oss.korext.com/regressions/ARD-2026-0071`);
+  if (!jsonOutput) {
+    console.log('\nAI Regression Pattern Scan\n');
+    console.log('Scanning current directory...');
+  }
 
-   console.log('\nRun with --json for machine output.');
+  const files = walkDir(scanDir);
+  const matches = [];
+
+  for (const filePath of files) {
+    let content;
+    try { content = fs.readFileSync(filePath, 'utf8'); }
+    catch { continue; }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const lines = content.split('\n');
+
+    for (const pattern of BUILTIN_PATTERNS) {
+      if (!pattern.extensions.includes(ext)) continue;
+
+      for (let i = 0; i < lines.length; i++) {
+        if (pattern.regex.test(lines[i])) {
+          const relPath = path.relative(scanDir, filePath);
+          matches.push({
+            pattern_id: pattern.id,
+            title: pattern.title,
+            severity: pattern.severity,
+            category: pattern.category,
+            file: relPath,
+            line: i + 1,
+            snippet: lines[i].trim().substring(0, 120),
+            description: pattern.description,
+            url: `https://oss.korext.com/regressions/${pattern.id}`,
+          });
+          break; // One match per pattern per file
+        }
+      }
+    }
+  }
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({
+      scanned: files.length,
+      patterns_loaded: BUILTIN_PATTERNS.length,
+      matches_found: matches.length,
+      matches,
+    }, null, 2));
+    return;
+  }
+
+  console.log(`\nScanned: ${files.length} files`);
+  console.log(`Patterns loaded: ${BUILTIN_PATTERNS.length}\n`);
+
+  if (matches.length === 0) {
+    console.log('\x1b[32mNo matches found. Clean.\x1b[0m\n');
+    return;
+  }
+
+  console.log(`Matches found: ${matches.length}\n`);
+
+  for (const m of matches) {
+    const sevColor = m.severity === 'critical' ? '\x1b[31m' :
+                     m.severity === 'high' ? '\x1b[33m' :
+                     m.severity === 'medium' ? '\x1b[36m' : '\x1b[37m';
+    console.log(`${m.pattern_id}: ${m.title}`);
+    console.log(`  ${m.file}:${m.line}`);
+    console.log(`  Severity: ${sevColor}${m.severity}\x1b[0m`);
+    console.log(`  ${m.snippet}`);
+    console.log(`  Fix: ${m.url}`);
+    console.log('');
+  }
+
+  console.log('Run with --json for machine output.');
 }
 
 function cmdList() {
-  console.log('\n\\x1b[1mRecent AI Regression Patterns\\x1b[0m\n');
+  console.log('\n\x1b[1mRecent AI Regression Patterns\x1b[0m\n');
   const reqClient = REGISTRY_URL.startsWith('https') ? https : http;
   reqClient.get(`${REGISTRY_URL}/search`, (res) => {
     let body = '';
