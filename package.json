@@ -1,13 +1,19 @@
 {
   "name": "@korext/regression-submit",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "CLI for drafting, submitting, and detecting AI coding regression patterns from the public registry at oss.korext.com/regressions.",
   "keywords": [
-    "ai", "regression", "patterns",
-    "benchmark", "failures",
-    "code-quality", "copilot",
-    "cursor", "claude-code",
-    "testing", "research"
+    "ai",
+    "regression",
+    "patterns",
+    "benchmark",
+    "failures",
+    "code-quality",
+    "copilot",
+    "cursor",
+    "claude-code",
+    "testing",
+    "research"
   ],
   "author": "Korext <tombruno@korext.com> (https://korext.com)",
   "license": "Apache-2.0",
@@ -23,11 +29,16 @@
     "regression-submit": "bin/regression-submit.js"
   },
   "files": [
-    "bin/", "src/", "LICENSE",
-    "LICENSE-SPEC", "LICENSE-DATA",
+    "bin/",
+    "src/",
+    "LICENSE",
+    "LICENSE-SPEC",
+    "LICENSE-DATA",
     "README.md"
   ],
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "js-yaml": "^4.1.0"
   }
