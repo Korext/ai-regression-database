@@ -30,7 +30,6 @@
   },
   "files": [
     "bin/",
-    "src/",
     "LICENSE",
     "LICENSE-SPEC",
     "LICENSE-DATA",
