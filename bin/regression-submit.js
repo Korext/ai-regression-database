@@ -510,7 +510,7 @@ const cmd = args[0];
 
 if (args.includes('--help') || args.includes('-h') || !cmd) {
   console.log(`
-  \\x1b[1m@korext/regression-submit\\x1b[0m v1.0.5
+  \\x1b[1m@korext/regression-submit\\x1b[0m v1.0.6
 
   The CLI for the AI Regression Database.
   Report, validate, reproduce and scan code for regression patterns.
