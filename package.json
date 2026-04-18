@@ -1,6 +1,6 @@
 {
   "name": "@korext/regression-submit",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "CLI for drafting, submitting, and detecting AI coding regression patterns from the public registry at oss.korext.com/regressions.",
   "keywords": [
     "ai",
